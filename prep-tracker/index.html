@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PrepTracker">
+<meta name="theme-color" content="#185FA5">
+<title>Backend Prep Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --blue:#185FA5; --blue-light:#E6F1FB; --blue-mid:#378ADD; --blue-dark:#0C447C;
+    --green:#1D9E75; --green-light:#E1F5EE; --green-dark:#085041;
+    --purple:#534AB7; --purple-light:#EEEDFE; --purple-dark:#3C3489;
+    --orange:#D85A30; --orange-light:#FAECE7; --orange-dark:#712B13;
+    --pink:#D4537E; --pink-light:#FBEAF0; --pink-dark:#72243E;
+    --amber:#BA7517; --amber-light:#FAEEDA; --amber-dark:#633806;
+    --gray:#888780; --gray-light:#F1EFE8; --gray-dark:#444441;
+    --text:#1a1a2e; --text2:#555; --text3:#999;
+    --bg:#fff; --bg2:#f8f8fc; --bg3:#f0f0f5;
+    --border:#e5e5ee; --border2:#d0d0df;
+    --radius:10px; --radius-sm:7px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --text:#e8e8f0; --text2:#aaa; --text3:#666;
+      --bg:#111118; --bg2:#1a1a24; --bg3:#222230;
+      --border:#2a2a3a; --border2:#333345;
+      --blue-light:#0c2040; --green-light:#0a2418; --purple-light:#1a1540;
+      --orange-light:#2a1408; --pink-light:#28101c; --amber-light:#241608;
+      --gray-light:#1e1e28;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+  body{display:flex;flex-direction:column;overflow:hidden}
+
+  /* ── TOPBAR ── */
+  .topbar{
+    background:var(--blue);
+    color:#fff;
+    padding:calc(var(--safe-top) + 12px) 16px 12px;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-shrink:0;
+  }
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-.3px}
+  .topbar-sub{font-size:11px;opacity:.75;margin-top:1px}
+  .user-badge{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500}
+
+  /* ── SCROLL AREA ── */
+  .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .page{display:none;padding:16px 16px calc(var(--safe-bottom) + 80px)}
+  .page.active{display:block}
+
+  /* ── BOTTOM NAV ── */
+  .bottomnav{
+    background:var(--bg);
+    border-top:0.5px solid var(--border);
+    display:flex;
+    padding-bottom:var(--safe-bottom);
+    flex-shrink:0;
+  }
+  .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border:none;background:none;color:var(--text3);font-size:10px;cursor:pointer;transition:color .15s}
+  .navbtn.active{color:var(--blue)}
+  .navbtn svg{width:22px;height:22px;stroke-width:1.6;fill:none;stroke:currentColor}
+
+  /* ── CARDS ── */
+  .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+  .card-sm{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+
+  /* ── STATS GRID ── */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:var(--bg2);border-radius:var(--radius);padding:14px;text-align:center}
+  .stat-val{font-size:26px;font-weight:600;color:var(--text);line-height:1}
+  .stat-lbl{font-size:11px;color:var(--text3);margin-top:4px}
+
+  /* ── HEATMAP ── */
+  .heatmap{display:grid;grid-template-columns:repeat(13,1fr);gap:4px;margin:12px 0}
+  .hcell{aspect-ratio:1;border-radius:3px;cursor:pointer}
+
+  /* ── TRACK BARS ── */
+  .track-row{margin-bottom:12px}
+  .track-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .track-name{font-size:13px;font-weight:500;color:var(--text)}
+  .track-pct{font-size:12px;color:var(--text2)}
+  .bar-bg{background:var(--bg3);border-radius:4px;height:6px}
+  .bar-fill{height:6px;border-radius:4px;transition:width .4s}
+
+  /* ── WEEK NAV ── */
+  .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .week-label{font-size:16px;font-weight:600;color:var(--text);text-align:center}
+  .week-sub{font-size:11px;color:var(--text3);text-align:center}
+  .nav-btn{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:14px;cursor:pointer;color:var(--text)}
+
+  /* ── TASK LIST ── */
+  .task-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer}
+  .task-item:last-child{border-bottom:none}
+  .chk{width:20px;height:20px;border:1.5px solid var(--border2);border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .chk.done{background:var(--green);border-color:var(--green)}
+  .chk.done::after{content:'';display:block;width:11px;height:7px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+  .task-text{font-size:14px;color:var(--text);line-height:1.4;flex:1}
+  .task-text.done{text-decoration:line-through;color:var(--text3)}
+
+  /* ── TRACK SECTION IN WEEKLY ── */
+  .track-section{margin-bottom:14px}
+  .track-header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;user-select:none}
+  .track-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .track-title{font-size:14px;font-weight:500;color:var(--text);flex:1}
+  .track-badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+  .track-body{padding:0 4px}
+  .track-tip{font-size:12px;color:var(--text2);padding:8px 12px;border-left:3px solid;border-radius:0 6px 6px 0;margin-bottom:8px;line-height:1.5}
+  .track-prog{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
+  .track-prog .bar-bg{flex:1}
+
+  /* ── CONCEPT INDEX ── */
+  .concept-group{margin-bottom:20px}
+  .concept-title{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .concept-card{background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px}
+  .concept-name{font-size:13px;font-weight:500;color:var(--text)}
+  .concept-sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4}
+
+  /* ── RESOURCES ── */
+  .res-section{margin-bottom:20px}
+  .res-label{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .res-item{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:6px}
+  .res-name{font-size:14px;font-weight:500;color:var(--blue)}
+  .res-desc{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.4}
+  .res-type{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;margin-bottom:5px;display:inline-block}
+
+  /* ── LEETCODE ── */
+  .lc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .lc-table{width:100%;border-collapse:collapse}
+  .lc-table th{font-size:11px;color:var(--text3);text-align:left;padding:4px 8px 8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .lc-table td{font-size:13px;padding:9px 8px;border-bottom:0.5px solid var(--border)}
+  .lc-table tr:last-child td{border-bottom:none}
+  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+  .easy-b{background:var(--green-light);color:var(--green-dark)}
+  .med-b{background:var(--amber-light);color:var(--amber-dark)}
+  .hard-b{background:#FCEBEB;color:#791F1F}
+  .solved-b{background:var(--green-light);color:var(--green-dark)}
+  .hint-b{background:var(--amber-light);color:var(--amber-dark)}
+  .review-b{background:#FCEBEB;color:#791F1F}
+  .add-form{background:var(--bg2);border-radius:var(--radius);padding:14px;margin-top:12px}
+  .add-form input,.add-form select{width:100%;padding:9px 12px;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);margin-bottom:8px;font-family:inherit}
+  .add-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn-primary{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+  .btn-danger{background:none;border:none;color:#E24B4A;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+
+  /* ── NOTES ── */
+  .notes-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .notes-nav .week-label{flex:1}
+  textarea{width:100%;padding:12px;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;resize:vertical;min-height:120px;line-height:1.5}
+  .save-btn{margin-top:8px;padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+  .saved-msg{font-size:12px;color:var(--green);margin-left:10px;opacity:0;transition:opacity .3s}
+  .past-note{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+  .past-note-week{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:5px}
+  .past-note-text{font-size:13px;color:var(--text);line-height:1.5;white-space:pre-wrap}
+
+  /* ── LOADING / TOAST ── */
+  .loading{display:flex;align-items:center;justify-content:center;padding:40px;flex-direction:column;gap:12px}
+  .spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:calc(var(--safe-bottom) + 76px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;color:#fff;font-size:13px;padding:9px 18px;border-radius:20px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ── SETUP SCREEN ── */
+  .setup{max-width:360px;margin:60px auto;padding:0 20px;text-align:center}
+  .setup h2{font-size:20px;font-weight:600;margin-bottom:8px;color:var(--text)}
+  .setup p{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+  .setup input{width:100%;padding:11px 14px;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;margin-bottom:10px}
+  .setup .btn-primary{border-radius:var(--radius)}
+
+  /* ── SECTION HEADERS ── */
+  .section-hdr{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:18px 0 8px}
+
+  /* ── OVERALL WEEK PROGRESS BAR ── */
+  .week-progress{background:var(--bg2);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+  .wp-label{font-size:13px;color:var(--text2);flex:1}
+  .wp-bar{flex:2;background:var(--bg3);border-radius:4px;height:7px}
+  .wp-fill{height:7px;border-radius:4px;background:var(--green);transition:width .4s}
+  .wp-pct{font-size:14px;font-weight:600;color:var(--text);min-width:36px;text-align:right}
+
+  .streak-row{display:flex;align-items:center;gap:10px;background:var(--amber-light);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+  .streak-icon{font-size:22px}
+  .streak-text{font-size:13px;color:var(--amber-dark);flex:1}
+  .streak-num{font-size:18px;font-weight:700;color:var(--amber-dark)}
+</style>
+</head>
+<body>
+
+<div id="setup-screen" style="display:none">
+  <div class="setup">
+    <div style="font-size:48px;margin-bottom:16px">📚</div>
+    <h2>Backend Prep Tracker</h2>
+    <p>Enter your name to get started. Use the same name every time to keep your progress.</p>
+    <input type="text" id="setup-name" placeholder="Your first name (e.g. phani)" maxlength="20" autocomplete="off">
+    <button class="btn-primary" onclick="setupUser()">Start tracking</button>
+  </div>
+</div>
+
+<div id="app" style="display:none;height:100%;flex-direction:column;display:none">
+
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">PrepTracker</div>
+      <div class="topbar-sub">6-month backend challenge</div>
+    </div>
+    <div class="user-badge" id="user-badge">...</div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="pg-dashboard">
+      <div class="stats" id="db-stats">
+        <div class="stat"><div class="stat-val" id="s-overall">0%</div><div class="stat-lbl">overall done</div></div>
+        <div class="stat"><div class="stat-val" id="s-tasks">0</div><div class="stat-lbl">tasks done</div></div>
+        <div class="stat"><div class="stat-val" id="s-lc">0</div><div class="stat-lbl">problems logged</div></div>
+        <div class="stat"><div class="stat-val" id="s-week">1</div><div class="stat-lbl">current week</div></div>
+      </div>
+      <div class="streak-row">
+        <div class="streak-icon">🔥</div>
+        <div class="streak-text">week streak</div>
+        <div class="streak-num" id="s-streak">0</div>
+      </div>
+      <div class="section-hdr">26-week heatmap</div>
+      <div class="heatmap" id="heatmap"></div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text3);margin-bottom:16px">
+        <span>less</span>
+        <div style="width:12px;height:12px;border-radius:2px;background:var(--bg3)"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:#B5D4F4"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:#378ADD"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:#0C447C"></div>
+        <span>more</span>
+      </div>
+      <div class="section-hdr">Track breakdown</div>
+      <div id="track-progress"></div>
+    </div>
+
+    <!-- WEEKLY -->
+    <div class="page" id="pg-weekly">
+      <div class="week-nav">
+        <button class="nav-btn" onclick="changeWeek(-1)">&#8592;</button>
+        <div>
+          <div class="week-label" id="wk-label">Week 1</div>
+          <div class="week-sub" id="wk-sub"></div>
+        </div>
+        <button class="nav-btn" onclick="changeWeek(1)">&#8594;</button>
+      </div>
+      <div class="week-progress">
+        <div class="wp-label" id="wp-label">0 of 0 done</div>
+        <div class="wp-bar"><div class="wp-fill" id="wp-fill" style="width:0%"></div></div>
+        <div class="wp-pct" id="wp-pct">0%</div>
+      </div>
+      <div id="weekly-tracks"></div>
+    </div>
+
+    <!-- CONCEPTS -->
+    <div class="page" id="pg-concepts">
+      <div id="concept-list"></div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="page" id="pg-resources">
+      <div id="resource-list"></div>
+    </div>
+
+    <!-- LEETCODE -->
+    <div class="page" id="pg-leetcode">
+      <div class="lc-stats" id="lc-stats">
+        <div class="stat"><div class="stat-val" style="font-size:20px;color:#27500A" id="lc-easy">0</div><div class="stat-lbl">easy</div></div>
+        <div class="stat"><div class="stat-val" style="font-size:20px;color:#633806" id="lc-med">0</div><div class="stat-lbl">medium</div></div>
+        <div class="stat"><div class="stat-val" style="font-size:20px;color:#791F1F" id="lc-hard">0</div><div class="stat-lbl">hard</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="lc-table">
+          <thead><tr><th>Problem</th><th>Diff</th><th>Status</th><th>Wk</th><th></th></tr></thead>
+          <tbody id="lc-tbody"></tbody>
+        </table>
+      </div>
+      <div class="add-form">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Log a problem</div>
+        <input type="text" id="lc-name" placeholder="Problem name or number" autocomplete="off">
+        <div class="add-form-row">
+          <select id="lc-diff">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <select id="lc-status">
+            <option value="solved">Solved</option>
+            <option value="hint">With hint</option>
+            <option value="review">Need review</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="addLC()">Add problem</button>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="page" id="pg-notes">
+      <div class="notes-nav">
+        <button class="nav-btn" onclick="noteWeek=Math.max(1,noteWeek-1);renderNotes()">&#8592;</button>
+        <div class="week-label">Week <span id="note-wk">1</span></div>
+        <button class="nav-btn" onclick="noteWeek=Math.min(26,noteWeek+1);renderNotes()">&#8594;</button>
+      </div>
+      <textarea id="note-input" placeholder="What clicked this week? Problems that tripped you up, patterns to remember, things to revisit..."></textarea>
+      <div style="display:flex;align-items:center">
+        <button class="save-btn" onclick="saveNote()">Save note</button>
+        <span class="saved-msg" id="saved-msg">Saved ✓</span>
+      </div>
+      <div class="section-hdr" style="margin-top:20px">Previous notes</div>
+      <div id="past-notes"></div>
+    </div>
+
+  </div>
+
+  <nav class="bottomnav">
+    <button class="navbtn active" onclick="showPage('dashboard',this)" data-page="dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="navbtn" onclick="showPage('weekly',this)" data-page="weekly">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Weekly
+    </button>
+    <button class="navbtn" onclick="showPage('concepts',this)" data-page="concepts">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Concepts
+    </button>
+    <button class="navbtn" onclick="showPage('leetcode',this)" data-page="leetcode">
+      <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      LeetCode
+    </button>
+    <button class="navbtn" onclick="showPage('notes',this)" data-page="notes">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Notes
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="env.js"></script>
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const env = window.__ENV__ || {};
+const SUPABASE_URL = env.SUPABASE_URL || '';
+const SUPABASE_KEY = env.SUPABASE_KEY || '';
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.warn('Supabase env values are missing. Generate prep-tracker/env.js from .env or set values in env.js.');
+}
+const START_DATE = new Date('2025-06-01');
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const TRACKS = [
+  { id:'dsa', name:'DSA', color:'#378ADD', light:'#E6F1FB', dark:'#0C447C', weeks:[
+    {tip:'Arrays, strings, two pointers — start here.',tasks:['Two Sum, Best Time to Buy Stock','Valid Anagram, Longest Substring Without Repeat','Two Pointers: 3Sum, Container With Most Water','Sliding Window: Max Sum Subarray','Note patterns in a running doc']},
+    {tip:'Hashing and prefix sums — understand before speed.',tasks:['HashMap: Group Anagrams, Top-K Frequent','Prefix Sum ×2','Binary Search: classic + rotated array','Study 1 hard solution thoroughly','Revise week 1 patterns']},
+    {tip:'Linked lists and stacks — frequent at Swiggy/Zepto.',tasks:['Linked List: Reverse, Detect Cycle, Merge Sorted','Stack: Valid Parentheses, Min Stack, Daily Temps','2 medium problems of choice','Read solutions you got stuck on','Timed mock: 30 min, 2 problems']},
+    {tip:'Trees — highest ROI topic for all target companies.',tasks:['Binary Tree: Inorder, Level Order, Max Depth','BST: Validate, Search, Insert','BFS: Right Side View, Zigzag Traversal','DFS: Path Sum, Lowest Common Ancestor','Revise weeks 1–3 flashcards']},
+    {tip:'Graphs start — take it slow, patterns take time.',tasks:['Graph: adjacency list vs matrix','BFS: Number of Islands, Rotting Oranges','DFS: Clone Graph, Pacific Atlantic','Union-Find: Connected Components','Timed mock: 2 medium problems']},
+    {tip:'Heaps and greedy — PriorityQueue at Amazon.',tasks:['Heap: Kth Largest, Top-K Frequent','Merge K Sorted Lists','Greedy: Meeting Rooms, Task Scheduler','2 medium mixing heaps + greedy','Revise all graph problems']},
+    {tip:'DP begins — hardest track, go slow.',tasks:['DP intro: Climbing Stairs, House Robber, Coin Change','1D DP: Longest Increasing Subsequence','2D DP: Unique Paths, Minimum Path Sum','Memoization vs tabulation — practice both','Revise weeks 4–6']},
+    {tip:'DP continues — string + interval DP.',tasks:['String DP: Edit Distance, LCS','Knapsack 0/1 and unbounded','Interval DP: Burst Balloons','2 company-tagged problems','Full mock: 3 problems, 45 min']},
+    {tip:'Advanced graphs — Dijkstra asked at Google/Amazon.',tasks:['Dijkstra: Network Delay, Cheapest Flights','Topological Sort: Course Schedule I & II','Bellman-Ford intro','1 hard with hints','Revise all DP so far']},
+    {tip:'Tries and bit manipulation — differentiators.',tasks:['Trie: Implement, Word Search II','Segment Tree: range sum query','Bit manipulation: 3–4 problems','2 medium mixed','Company-tagged: Zepto/OneCard']},
+    {tip:'Consolidation — no new topics, go deep.',tasks:['Identify 3 weakest topics','Redo 2 problems from each weak area','Full mock: 4 problems, 60 min','Target <20 min per medium','Write patterns cheat sheet']},
+    {tip:'Mock-heavy week.',tasks:['2 timed mocks (45 min each)','Review all wrong answers','3 hard with hints','Amazon-tagged: 3 problems','Update cheat sheet']},
+    {tip:'Google/Amazon prep — clarity matters.',tasks:['Google-tagged: 4 medium','Amazon-tagged: 4 medium','Talk through solutions out loud','1 Pramp or peer mock','Revise trees + graphs']},
+    {tip:'Final DSA sprint — polish and speed.',tasks:['3 timed mocks over the week','10 random mediums timed','Revisit all hard problems','Write concise interview-style solutions','Target: 160+ problems total']},
+  ]},
+  { id:'sd', name:'System Design', color:'#7F77DD', light:'#EEEDFE', dark:'#3C3489', weeks:[
+    {tip:'Fundamentals — connect theory to your real work.',tasks:['Scalability, availability, consistency basics','CAP theorem with practical examples','Watch 1 system design intro (Gaurav Sen)','Map concepts to your Cognicept/Pichainlabs work']},
+    {tip:'Databases — your Postgres + DynamoDB experience is gold.',tasks:['SQL vs NoSQL — when to choose which','Indexes, sharding, replication basics','Your DynamoDB → Postgres migration as case study','Design: DB for a ride-sharing app (1 page)']},
+    {tip:'Caching — Redis is on your resume, go deep.',tasks:['Redis patterns: write-through, lazy, TTL','CDN basics and cache invalidation','Design: caching layer for e-commerce','When NOT to cache — failure modes']},
+    {tip:'Messaging — Kafka/RabbitMQ is your edge.',tasks:['Kafka internals: partitions, offsets, consumer groups','Kafka vs RabbitMQ vs SQS tradeoffs','Design: notification service using Kafka','Write up your bulk upload Kafka feature']},
+    {tip:'API design and microservices.',tasks:['REST vs gRPC vs GraphQL tradeoffs','Rate limiting: token bucket, leaky bucket','API gateway patterns','Design: rate limiter from scratch']},
+    {tip:'URL shortener — classic starter design.',tasks:['Full URL shortener design (write it out)','Estimate scale: QPS, storage, bandwidth','Walk through out loud (record it)','Compare with a reference solution']},
+    {tip:'Notification service — maps to your cron work.',tasks:['Design: push notification system','Handle: deduplication, retry, guarantees','Connect to your email/SMS alerting work','Compare with reference solution']},
+    {tip:'Food delivery backend — Swiggy/Zepto relevance.',tasks:['Design: food delivery backend (full order flow)','Location tracking: geohashing basics','Real-time order status updates','Read Swiggy engineering blog — 2 posts']},
+    {tip:'Social feed — fan-out, ranking, pagination.',tasks:['Instagram feed design: write vs read heavy','Fan-out on write vs read tradeoff','Cursor vs offset pagination','Search autocomplete system design']},
+    {tip:'Payments — your wallet service shines.',tasks:['Design: wallet + payment service (use your work)','Idempotency in payments','Eventual consistency in financial systems','Write up your payment_service as case study']},
+    {tip:'Distributed systems deep dive — DDIA ch 7–9.',tasks:['DDIA chapter 7: transactions','DDIA chapter 8: distributed systems problems','Design: distributed job scheduler','1-slide summary per design done so far']},
+    {tip:'Mock system design interviews.',tasks:['Full mock: design a search engine (45 min)','Full mock: design WhatsApp (45 min)','Review: what you missed, what was vague','Read Google SRE book chapters 1–2']},
+    {tip:'Company-specific prep.',tasks:['Read Swiggy engineering blog — 2 more','Read Flipkart tech blog — 2 posts','Tailor your designs to their scale','3 system design answers in STAR structure']},
+    {tip:'Final system design revision.',tasks:['Re-do 3 favourite designs from memory','1 full mock with friend or Pramp','Explain your side project as system design','Identify 2 remaining gaps — fill them']},
+  ]},
+  { id:'oop', name:'OOP & Patterns', color:'#1D9E75', light:'#E1F5EE', dark:'#085041', weeks:[
+    {tip:'SOLID first — all patterns build on this.',tasks:['SRP, OCP, LSP, ISP, DIP with examples','Find 1 violation in your own codebase','Python class example for each principle']},
+    {tip:'Creational patterns — Factory most asked.',tasks:['Factory pattern: implement in Python/Java','Singleton — when to use and avoid','Builder pattern for complex objects','Spot these patterns in Flask or Spring']},
+    {tip:'Structural patterns — Decorator critical.',tasks:['Decorator: Flask middleware is this pattern','Adapter and Facade patterns','Proxy: API gateway is a proxy','Write request logging decorator in Python']},
+    {tip:'Behavioural patterns — Observer + Strategy.',tasks:['Observer: event-driven systems','Strategy: payment processing example','Command pattern basics','Design: payment system using Strategy']},
+    {tip:'LLD begins.',tasks:['Design: parking lot system (full OOP)','Class diagram for food delivery order flow','Review your design with SOLID lens','LLD vs HLD: understand the difference']},
+    {tip:'LLD interview problems.',tasks:['Design: library management system','Design: elevator system','Practice explaining class hierarchy out loud','Spot patterns in your side project']},
+    {tip:'Mid-point LLD revision.',tasks:['Redo parking lot + elevator from memory','Whiteboard 1 design without notes','Note: where you over/under-engineer','Read 1 LLD interview breakdown online']},
+    {tip:'Advanced LLD.',tasks:['Design: chess game (State + Command)','Design: notification system (Observer + Factory)','Compare to reference implementations','2 LLD answers in STAR structure']},
+  ]},
+  { id:'devops', name:'DevOps', color:'#D85A30', light:'#FAECE7', dark:'#712B13', weeks:[
+    {tip:'Docker deep dive — go beyond what you know.',tasks:['Multi-stage builds and layer caching','Docker networking: bridge, host, overlay','Optimised Dockerfile for FastAPI app','Docker Compose: app + Postgres + Redis']},
+    {tip:'Kubernetes fundamentals.',tasks:['Pods, deployments, services, ingress','ConfigMaps, secrets, resource limits','Run local k8s (minikube or k3s)','Deploy FastAPI app on k8s locally']},
+    {tip:'CI/CD — GitHub Actions alongside Jenkins.',tasks:['GitHub Actions: build + test pipeline for Python','GitHub Actions vs Jenkins tradeoffs','Add CI to your side project repo','Blue-green vs canary deployments']},
+    {tip:'AWS depth — your migration is your edge.',tasks:['ECS vs EKS vs EC2: when to use which','Lambda + Step Functions (you built this!)','IAM: roles, policies, least privilege','Your Azure → AWS migration as case study']},
+    {tip:'Observability — Grafana is yours, go deeper.',tasks:['Metrics vs logs vs traces: 3 pillars','Prometheus + Grafana setup basics','OpenTelemetry distributed tracing intro','Structured JSON logging in side project']},
+    {tip:'Infrastructure as code.',tasks:['Terraform: providers, resources, state','Write Terraform for EC2 + RDS','Compare Terraform vs AWS CDK','Read about your company infra']},
+    {tip:'DevOps interview prep.',tasks:['"Describe your CI/CD pipeline" — STAR answer','"How did you reduce deployment risk?" — Release Master','"What monitoring for a new service?"','k6 load testing: articulate what you measured']},
+    {tip:'Deploy side project.',tasks:['Deploy to AWS (ECS or EC2)','CloudWatch or Prometheus + Grafana','Document architecture in README','Practice 2 DevOps questions out loud']},
+  ]},
+  { id:'beh', name:'Behavioural', color:'#D4537E', light:'#FBEAF0', dark:'#72243E', weeks:[
+    {tip:'Bank your stories — raw material for interviews.',tasks:['List 10 impactful things across all 3 jobs','Tag each: impact, challenge, leadership, conflict','Write 1-para STAR for top 5','Focus: migration, 300% API opt, Kafka upload']},
+    {tip:'Map stories to question types.',tasks:['"Challenge you overcame" — STAR written','"Conflict with teammate" — STAR written','"System you designed" — STAR written','"Process you improved" — STAR written']},
+    {tip:'Leadership and ownership.',tasks:['"Most complex project you owned" — STAR','"Production incident handling" — STAR','"Disagreed with a decision" — STAR','Practice out loud: 2 min per story']},
+    {tip:'Amazon Leadership Principles.',tasks:['Read 16 LPs, pick 8 most relevant','Map each LP to one of your stories','"Why Amazon?" answer written','"Why Swiggy/Zepto/OneCard?" — write each']},
+    {tip:'Mock behavioural rounds.',tasks:['30 min mock (record yourself)','Were answers concise? Showed ownership?','Trim stories to 90 seconds each','"Tell me about yourself" — 2 min polished']},
+  ]},
+  { id:'proj', name:'Side Project', color:'#BA7517', light:'#FAEEDA', dark:'#633806', weeks:[
+    {tip:'Scope it and commit — starting matters most.',tasks:['1-page brief: what it does, who uses it','Define MVP: minimum shippable version','Choose stack: FastAPI + PostgreSQL + Redis + Kafka','GitHub repo, README, first commit']},
+    {tip:'Core data models and API.',tasks:['DB schema: tables, relationships, indexes','Scaffold FastAPI: routers, models, schemas','Implement basic CRUD endpoints','Unit tests with Pytest']},
+    {tip:'Async and messaging.',tasks:['Add Celery or Kafka for async tasks','1 background job (email or notification)','Redis caching for 1 expensive endpoint','Test async flow end-to-end']},
+    {tip:'Auth, security, middleware.',tasks:['JWT authentication','Request logging middleware','Rate limiting on public endpoints','Integration tests for auth flow']},
+    {tip:'Containerise and CI/CD.',tasks:['Dockerise: multi-stage build','Docker Compose: app + DB + Redis + Kafka','GitHub Actions: lint + test on push','Deploy script for AWS']},
+    {tip:'Deploy and observe.',tasks:['Deploy to AWS (EC2 or ECS)','Health check endpoint','CloudWatch or Prometheus + Grafana','Structured JSON logging throughout']},
+    {tip:'Polish and document.',tasks:['API docs via FastAPI OpenAPI','README: architecture diagram + setup guide','CHALLENGES.md: what was hard, learned','Demo-ready: 5-min walkthrough']},
+    {tip:'Interview-prep using the project.',tasks:['System design notes for your project','"Walk me through your architecture" (5 min)','"Scale to 10× traffic?" — answer prepared','Add project to LinkedIn and resume']},
+  ]},
+];
+
+const CONCEPTS = [
+  {track:'DSA',color:'#378ADD',items:[
+    {name:'Arrays & strings',sub:'Two pointers, sliding window, prefix sum'},
+    {name:'Hashing',sub:'HashMap patterns, frequency counting'},
+    {name:'Binary search',sub:'Classic, rotated array, search space'},
+    {name:'Linked lists',sub:'Reverse, cycle, merge, fast/slow pointer'},
+    {name:'Stacks & queues',sub:'Monotonic stack, deque, parentheses'},
+    {name:'Trees',sub:'BFS, DFS, BST, LCA, diameter, path sum'},
+    {name:'Graphs',sub:'BFS/DFS, Union-Find, topological, Dijkstra'},
+    {name:'Heaps',sub:'Min/max heap, K-th element, merge K lists'},
+    {name:'Dynamic programming',sub:'1D/2D DP, memoization, knapsack, string'},
+    {name:'Tries',sub:'Insert, search, prefix, Word Search II'},
+    {name:'Greedy',sub:'Interval scheduling, jump game, gas station'},
+    {name:'Bit manipulation',sub:'XOR tricks, bit counting, power of two'},
+  ]},
+  {track:'System Design',color:'#7F77DD',items:[
+    {name:'Scalability basics',sub:'Horizontal vs vertical, load balancing'},
+    {name:'CAP theorem',sub:'Consistency, availability, partition tolerance'},
+    {name:'Databases',sub:'SQL vs NoSQL, indexing, sharding, replication'},
+    {name:'Caching',sub:'Redis, eviction, write-through vs lazy, CDN'},
+    {name:'Messaging systems',sub:'Kafka, RabbitMQ, pub/sub, ordering'},
+    {name:'API design',sub:'REST, gRPC, GraphQL, rate limiting'},
+    {name:'Microservices',sub:'Discovery, circuit breaker, saga pattern'},
+    {name:'Consistent hashing',sub:'Ring, virtual nodes, hotspot avoidance'},
+    {name:'Search systems',sub:'Inverted index, Elasticsearch, autocomplete'},
+    {name:'Real-time systems',sub:'WebSockets, SSE, long polling at scale'},
+    {name:'Distributed storage',sub:'S3, blob, CDN, replication strategies'},
+    {name:'Observability',sub:'Metrics, logs, traces, SLO/SLA/SLI'},
+  ]},
+  {track:'OOP & Patterns',color:'#1D9E75',items:[
+    {name:'SOLID principles',sub:'SRP, OCP, LSP, ISP, DIP with examples'},
+    {name:'Creational patterns',sub:'Factory, Builder, Singleton, Prototype'},
+    {name:'Structural patterns',sub:'Adapter, Decorator, Facade, Proxy'},
+    {name:'Behavioural patterns',sub:'Observer, Strategy, Command, State'},
+    {name:'LLD: Parking lot',sub:'OOP design, SOLID applied'},
+    {name:'LLD: Elevator system',sub:'State machine, command queue'},
+    {name:'LLD: Library system',sub:'Entities, search, reservations'},
+    {name:'LLD: Chess game',sub:'State + command patterns'},
+  ]},
+  {track:'DevOps',color:'#D85A30',items:[
+    {name:'Docker',sub:'Images, networking, multi-stage, Compose'},
+    {name:'Kubernetes',sub:'Pods, deployments, services, scaling'},
+    {name:'CI/CD',sub:'GitHub Actions, Jenkins, blue-green, canary'},
+    {name:'AWS core',sub:'EC2, ECS, EKS, Lambda, S3, RDS, IAM'},
+    {name:'AWS serverless',sub:'Lambda, Step Functions, API Gateway'},
+    {name:'Observability stack',sub:'Prometheus, Grafana, OpenTelemetry'},
+    {name:'Terraform',sub:'State, modules, providers, plan/apply'},
+    {name:'Load testing',sub:'k6, p95/p99 latency, bottleneck ID'},
+  ]},
+  {track:'Behavioural',color:'#D4537E',items:[
+    {name:'STAR method',sub:'Situation, Task, Action, Result — 90s'},
+    {name:'Amazon LPs',sub:'16 principles mapped to your stories'},
+    {name:'Conflict resolution',sub:'Disagree and commit, pushback stories'},
+    {name:'Ownership stories',sub:'Incidents, migrations, cross-team work'},
+  ]},
+];
+
+const RESOURCES = [
+  {track:'DSA',color:'#E6F1FB',tc:'#185FA5',items:[
+    {name:'NeetCode.io',type:'Free',desc:'Best structured DSA roadmap. Follow NeetCode 150 in order.'},
+    {name:'LeetCode.com',type:'Free/paid',desc:'Primary practice. Use company tags: Swiggy, Amazon, Flipkart.'},
+    {name:"Striver's SDE Sheet",type:'Free',desc:'takeUforward.com — 180 problems, very popular in India.'},
+    {name:'NeetCode YouTube',type:'Free',desc:'Best video explanations. Watch after attempting.'},
+  ]},
+  {track:'System Design',color:'#EEEDFE',tc:'#3C3489',items:[
+    {name:'DDIA — Martin Kleppmann',type:'Book',desc:'The bible of distributed systems. Read chapters 1–9. Must have.'},
+    {name:'System Design Interview — Alex Xu',type:'Book',desc:'Best structured interview prep. Vol 1 + 2.'},
+    {name:'Gaurav Sen YouTube',type:'Free',desc:'Best free system design videos. Start with "What is a message queue".'},
+    {name:'ByteByteGo newsletter',type:'Free/paid',desc:'bytebytego.com — weekly visual system design breakdowns.'},
+    {name:'High Scalability blog',type:'Free',desc:'highscalability.com — real system teardowns from Netflix, Uber.'},
+  ]},
+  {track:'OOP & Patterns',color:'#E1F5EE',tc:'#085041',items:[
+    {name:'Refactoring.Guru',type:'Free',desc:'Best visual pattern explanations. Do all 23 GoF patterns.'},
+    {name:'Head First Design Patterns',type:'Book',desc:'Most beginner-friendly. Java-based but universal concepts.'},
+    {name:'LLD Primer on GitHub',type:'Free',desc:'github.com/prasadgujar/low-level-design-primer'},
+  ]},
+  {track:'DevOps',color:'#FAECE7',tc:'#712B13',items:[
+    {name:'TechWorld with Nana',type:'YouTube',desc:'Best Docker, K8s, CI/CD video series. Free.'},
+    {name:'AWS Skill Builder',type:'Free',desc:'skillbuilder.aws — start with Cloud Practitioner path.'},
+    {name:'Terraform Learn',type:'Free',desc:'developer.hashicorp.com/terraform/tutorials — interactive.'},
+    {name:'Docker official docs',type:'Free',desc:'docs.docker.com — do the getting-started tutorial first.'},
+  ]},
+  {track:'Mock interviews',color:'#FBEAF0',tc:'#72243E',items:[
+    {name:'Pramp',type:'Free',desc:'pramp.com — free peer-to-peer mocks for DSA and behavioural.'},
+    {name:'Interviewing.io',type:'Paid',desc:'Anonymous mocks with real engineers. Worth it in Phase 4.'},
+    {name:'Exponent',type:'Paid',desc:'tryexponent.com — system design mocks and courses.'},
+  ]},
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let USER_ID = '';
+let currentWeek = 1;
+let noteWeek = 1;
+let checkedCache = {};
+let lcProblems = [];
+let weekPctCache = {};
+
+// ── SUPABASE HELPERS ────────────────────────────────────────────────────────
+async function sb(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || '',
+      ...opts.headers
+    },
+    method: opts.method || 'GET',
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.text();
+    console.error('Supabase error:', err);
+    return null;
+  }
+  if (res.status === 204) return true;
+  return res.json().catch(() => null);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  const saved = localStorage.getItem('prep_user');
+  if (!saved) {
+    document.getElementById('setup-screen').style.display = 'block';
+  } else {
+    USER_ID = saved;
+    await bootApp();
+  }
+});
+
+async function setupUser() {
+  const name = document.getElementById('setup-name').value.trim().toLowerCase();
+  if (!name) return;
+  USER_ID = name;
+  localStorage.setItem('prep_user', name);
+  document.getElementById('setup-screen').style.display = 'none';
+  await bootApp();
+}
+
+async function bootApp() {
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-badge').textContent = USER_ID;
+  currentWeek = getCurrentWeek();
+  document.getElementById('s-week').textContent = currentWeek;
+
+  showLoading('pg-dashboard');
+  await Promise.all([loadChecked(), loadLC()]);
+  renderConceptList();
+  renderResourceList();
+  renderDashboard();
+  renderWeekly();
+  hideLoading('pg-dashboard');
+}
+
+function getCurrentWeek() {
+  const diff = Date.now() - START_DATE.getTime();
+  const w = Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+  return Math.max(1, Math.min(26, w));
+}
+
+// ── LOAD DATA ───────────────────────────────────────────────────────────────
+async function loadChecked() {
+  const data = await sb(`tasks?user_id=eq.${USER_ID}&checked=eq.true&select=id`);
+  checkedCache = {};
+  if (data) data.forEach(r => { checkedCache[r.id] = true; });
+  rebuildWeekPctCache();
+}
+
+async function loadLC() {
+  const data = await sb(`lc_problems?user_id=eq.${USER_ID}&order=created_at.desc`);
+  lcProblems = data || [];
+}
+
+function rebuildWeekPctCache() {
+  weekPctCache = {};
+  for (let w = 1; w <= 26; w++) {
+    let tot = 0, done = 0;
+    TRACKS.forEach(t => {
+      const wi = Math.min(w - 1, t.weeks.length - 1);
+      t.weeks[wi].tasks.forEach((_, i) => {
+        tot++;
+        if (checkedCache[taskKey(w, t.id, i)]) done++;
+      });
+    });
+    weekPctCache[w] = tot > 0 ? Math.round(done / tot * 100) : 0;
+  }
+}
+
+function taskKey(w, tid, i) { return `w${w}_${tid}_${i}_${USER_ID}`; }
+
+// ── TOGGLE TASK ─────────────────────────────────────────────────────────────
+async function toggleTask(w, tid, i) {
+  const key = taskKey(w, tid, i);
+  const nowDone = !checkedCache[key];
+  checkedCache[key] = nowDone;
+  rebuildWeekPctCache();
+  renderWeekly();
+  renderDashboard();
+
+  if (nowDone) {
+    await sb('tasks', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates',
+      body: { id: key, user_id: USER_ID, checked: true }
+    });
+  } else {
+    await sb(`tasks?id=eq.${key}&user_id=eq.${USER_ID}`, { method: 'DELETE' });
+  }
+}
+
+// ── DASHBOARD ───────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const total = Object.values(weekPctCache).reduce((s, p, i) => {
+    const w = i + 1;
+    let t = 0;
+    TRACKS.forEach(tr => { const wi = Math.min(w - 1, tr.weeks.length - 1); t += tr.weeks[wi].tasks.length; });
+    return s + t;
+  }, 0);
+  const done = Object.keys(checkedCache).filter(k => checkedCache[k]).length;
+  const overallPct = total > 0 ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('s-overall').textContent = overallPct + '%';
+  document.getElementById('s-tasks').textContent = done;
+  document.getElementById('s-lc').textContent = lcProblems.length;
+
+  // streak
+  let streak = 0;
+  for (let w = currentWeek; w >= 1; w--) {
+    if (weekPctCache[w] > 0) streak++; else break;
+  }
+  document.getElementById('s-streak').textContent = streak;
+
+  // heatmap
+  const hm = document.getElementById('heatmap');
+  hm.innerHTML = '';
+  for (let w = 1; w <= 26; w++) {
+    const p = weekPctCache[w] || 0;
+    const bg = p === 0 ? 'var(--bg3)' : p < 40 ? '#B5D4F4' : p < 75 ? '#378ADD' : '#0C447C';
+    const cell = document.createElement('div');
+    cell.className = 'hcell';
+    cell.style.background = bg;
+    cell.title = `Week ${w}: ${p}%`;
+    cell.onclick = () => { currentWeek = w; showPage('weekly', document.querySelector('[data-page="weekly"]')); renderWeekly(); };
+    hm.appendChild(cell);
+  }
+
+  // track bars
+  const tp = document.getElementById('track-progress');
+  tp.innerHTML = '';
+  TRACKS.forEach(t => {
+    let tot = 0, done = 0;
+    for (let w = 1; w <= 26; w++) {
+      const wi = Math.min(w - 1, t.weeks.length - 1);
+      t.weeks[wi].tasks.forEach((_, i) => { tot++; if (checkedCache[taskKey(w, t.id, i)]) done++; });
+    }
+    const p = Math.round(done / tot * 100);
+    tp.innerHTML += `<div class="track-row">
+      <div class="track-head">
+        <span class="track-name" style="color:${t.color}">${t.name}</span>
+        <span class="track-pct">${done}/${tot} · ${p}%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="background:${t.color};width:${p}%"></div></div>
+    </div>`;
+  });
+}
+
+// ── WEEKLY ───────────────────────────────────────────────────────────────────
+function renderWeekly() {
+  document.getElementById('wk-label').textContent = `Week ${currentWeek}`;
+  const d = new Date(START_DATE);
+  d.setDate(d.getDate() + (currentWeek - 1) * 7);
+  const e = new Date(d); e.setDate(e.getDate() + 6);
+  const fmt = { month: 'short', day: 'numeric' };
+  document.getElementById('wk-sub').textContent =
+    d.toLocaleDateString('en-IN', fmt) + ' – ' + e.toLocaleDateString('en-IN', fmt);
+
+  let tot = 0, done = 0;
+  TRACKS.forEach(t => {
+    const wi = Math.min(currentWeek - 1, t.weeks.length - 1);
+    t.weeks[wi].tasks.forEach((_, i) => { tot++; if (checkedCache[taskKey(currentWeek, t.id, i)]) done++; });
+  });
+  const p = tot > 0 ? Math.round(done / tot * 100) : 0;
+  document.getElementById('wp-label').textContent = `${done} of ${tot} done`;
+  document.getElementById('wp-fill').style.width = p + '%';
+  document.getElementById('wp-pct').textContent = p + '%';
+
+  const wt = document.getElementById('weekly-tracks');
+  wt.innerHTML = '';
+  TRACKS.forEach(t => {
+    const wi = Math.min(currentWeek - 1, t.weeks.length - 1);
+    const wd = t.weeks[wi];
+    let td = 0;
+    wd.tasks.forEach((_, i) => { if (checkedCache[taskKey(currentWeek, t.id, i)]) td++; });
+    const tp = Math.round(td / wd.tasks.length * 100);
+
+    const sec = document.createElement('div');
+    sec.className = 'track-section';
+    sec.innerHTML = `
+      <div class="track-header" style="background:${t.light}" onclick="this.parentElement.querySelector('.track-body').style.display=this.parentElement.querySelector('.track-body').style.display==='none'?'block':'none'">
+        <div class="track-dot" style="background:${t.color}"></div>
+        <span class="track-title">${t.name}</span>
+        <span class="track-badge" style="background:${t.color};color:#fff">${tp}%</span>
+      </div>
+      <div class="track-body">
+        <div class="track-tip" style="border-left-color:${t.color};color:${t.dark}">${wd.tip}</div>
+        <div class="track-prog">
+          <span style="font-size:11px;color:var(--text3)">${td}/${wd.tasks.length}</span>
+          <div class="bar-bg"><div class="bar-fill" style="background:${t.color};width:${tp}%"></div></div>
+        </div>
+        <div class="task-list" id="tasks_${t.id}"></div>
+      </div>`;
+    wt.appendChild(sec);
+
+    const tl = sec.querySelector(`#tasks_${t.id}`);
+    wd.tasks.forEach((task, i) => {
+      const isDone = !!checkedCache[taskKey(currentWeek, t.id, i)];
+      const row = document.createElement('div');
+      row.className = 'task-item';
+      row.innerHTML = `<div class="chk${isDone ? ' done' : ''}"></div><span class="task-text${isDone ? ' done' : ''}">${task}</span>`;
+      row.addEventListener('click', () => toggleTask(currentWeek, t.id, i));
+      tl.appendChild(row);
+    });
+  });
+}
+
+function changeWeek(dir) {
+  const n = currentWeek + dir;
+  if (n < 1 || n > 26) return;
+  currentWeek = n;
+  renderWeekly();
+}
+
+// ── CONCEPTS ─────────────────────────────────────────────────────────────────
+function renderConceptList() {
+  const cl = document.getElementById('concept-list');
+  CONCEPTS.forEach(c => {
+    let html = `<div class="concept-group">
+      <div class="concept-title"><div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></div>${c.track}</div>
+      <div class="concept-grid">`;
+    c.items.forEach(item => {
+      html += `<div class="concept-card"><div class="concept-name">${item.name}</div><div class="concept-sub">${item.sub}</div></div>`;
+    });
+    html += '</div></div>';
+    cl.innerHTML += html;
+  });
+}
+
+// ── RESOURCES ─────────────────────────────────────────────────────────────────
+function renderResourceList() {
+  const rl = document.getElementById('resource-list');
+  RESOURCES.forEach(r => {
+    let html = `<div class="res-section">
+      <div class="res-label"><div style="width:8px;height:8px;border-radius:50%;background:${r.tc}"></div>${r.track}</div>`;
+    r.items.forEach(item => {
+      html += `<div class="res-item">
+        <span class="res-type" style="background:${r.color};color:${r.tc}">${item.type}</span>
+        <div class="res-name">${item.name}</div>
+        <div class="res-desc">${item.desc}</div>
+      </div>`;
+    });
+    html += '</div>';
+    rl.innerHTML += html;
+  });
+}
+
+// ── LEETCODE ──────────────────────────────────────────────────────────────────
+function renderLC() {
+  const easy = lcProblems.filter(p => p.difficulty === 'easy').length;
+  const med = lcProblems.filter(p => p.difficulty === 'medium').length;
+  const hard = lcProblems.filter(p => p.difficulty === 'hard').length;
+  document.getElementById('lc-easy').textContent = easy;
+  document.getElementById('lc-med').textContent = med;
+  document.getElementById('lc-hard').textContent = hard;
+  document.getElementById('s-lc').textContent = lcProblems.length;
+
+  const tbody = document.getElementById('lc-tbody');
+  tbody.innerHTML = '';
+  if (!lcProblems.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No problems logged yet</td></tr>';
+    return;
+  }
+  lcProblems.forEach((p, idx) => {
+    const dc = p.difficulty === 'easy' ? 'easy-b' : p.difficulty === 'medium' ? 'med-b' : 'hard-b';
+    const sc = p.status === 'solved' ? 'solved-b' : p.status === 'hint' ? 'hint-b' : 'review-b';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</td>
+      <td><span class="badge ${dc}">${p.difficulty}</span></td>
+      <td><span class="badge ${sc}">${p.status}</span></td>
+      <td style="color:var(--text3)">W${p.week}</td>
+      <td><button class="btn-danger" onclick="deleteLC(${p.id})">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function addLC() {
+  const name = document.getElementById('lc-name').value.trim();
+  if (!name) return;
+  const prob = {
+    user_id: USER_ID,
+    name,
+    difficulty: document.getElementById('lc-diff').value,
+    status: document.getElementById('lc-status').value,
+    week: currentWeek
+  };
+  const result = await sb('lc_problems', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: prob
+  });
+  if (result && result[0]) {
+    lcProblems.unshift(result[0]);
+    document.getElementById('lc-name').value = '';
+    renderLC();
+    showToast('Problem logged!');
+  }
+}
+
+async function deleteLC(id) {
+  await sb(`lc_problems?id=eq.${id}&user_id=eq.${USER_ID}`, { method: 'DELETE' });
+  lcProblems = lcProblems.filter(p => p.id !== id);
+  renderLC();
+}
+
+// ── NOTES ──────────────────────────────────────────────────────────────────
+async function renderNotes() {
+  document.getElementById('note-wk').textContent = noteWeek;
+  document.getElementById('note-input').value = '';
+
+  const data = await sb(`notes?user_id=eq.${USER_ID}&week=eq.${noteWeek}&select=content`);
+  if (data && data[0]) document.getElementById('note-input').value = data[0].content || '';
+
+  const pn = document.getElementById('past-notes');
+  pn.innerHTML = '';
+  const prev = await sb(`notes?user_id=eq.${USER_ID}&week=lt.${noteWeek}&order=week.desc&limit=4&select=week,content`);
+  if (prev) {
+    prev.filter(r => r.content).forEach(r => {
+      pn.innerHTML += `<div class="past-note">
+        <div class="past-note-week">Week ${r.week}</div>
+        <div class="past-note-text">${r.content}</div>
+      </div>`;
+    });
+  }
+  if (!pn.innerHTML) pn.innerHTML = '<div style="font-size:13px;color:var(--text3)">No previous notes yet.</div>';
+}
+
+async function saveNote() {
+  const content = document.getElementById('note-input').value;
+  await sb('notes', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    body: { user_id: USER_ID, week: noteWeek, content }
+  });
+  const msg = document.getElementById('saved-msg');
+  msg.style.opacity = '1';
+  setTimeout(() => { msg.style.opacity = '0'; }, 2000);
+}
+
+// ── UI HELPERS ──────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pg-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'leetcode') renderLC();
+  if (id === 'notes') renderNotes();
+  if (id === 'weekly') renderWeekly();
+}
+
+function showLoading(pageId) {
+  const pg = document.getElementById(pageId);
+  const el = document.createElement('div');
+  el.className = 'loading';
+  el.id = 'loading-overlay';
+  el.innerHTML = '<div class="spinner"></div><div style="font-size:13px;color:var(--text3)">Loading your progress...</div>';
+  pg.prepend(el);
+}
+
+function hideLoading(pageId) {
+  const el = document.getElementById('loading-overlay');
+  if (el) el.remove();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+
+</body>
+</html>
