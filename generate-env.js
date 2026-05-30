@@ -5,11 +5,6 @@ const projectRoot = __dirname;
 const envPath = path.join(projectRoot, '.env');
 const outPath = path.join(projectRoot, 'prep-tracker', 'env.js');
 
-if (!fs.existsSync(envPath)) {
-  console.error('.env file not found in project root. Create one with SUPABASE_URL and SUPABASE_KEY.');
-  process.exit(1);
-}
-
 const env = {
   SUPABASE_URL: process.env.SUPABASE_URL || '',
   SUPABASE_KEY: process.env.SUPABASE_KEY || ''
@@ -17,12 +12,8 @@ const env = {
 
 const isCI = process.env.GITHUB_ACTIONS === 'true';
 
-if (!env.SUPABASE_URL || !env.SUPABASE_KEY) {
-  if (isCI) {
-    console.error('SUPABASE_URL and SUPABASE_KEY secrets must be set in GitHub Actions environment.');
-    process.exit(1);
-  }
-
+// Try to load from .env if env vars are not set and not in CI
+if ((!env.SUPABASE_URL || !env.SUPABASE_KEY) && !isCI) {
   if (!fs.existsSync(envPath)) {
     console.error('.env file not found in project root. Create one with SUPABASE_URL and SUPABASE_KEY.');
     process.exit(1);
