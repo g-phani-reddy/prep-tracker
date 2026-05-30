@@ -15,7 +15,14 @@ const env = {
   SUPABASE_KEY: process.env.SUPABASE_KEY || ''
 };
 
+const isCI = process.env.GITHUB_ACTIONS === 'true';
+
 if (!env.SUPABASE_URL || !env.SUPABASE_KEY) {
+  if (isCI) {
+    console.error('SUPABASE_URL and SUPABASE_KEY secrets must be set in GitHub Actions environment.');
+    process.exit(1);
+  }
+
   if (!fs.existsSync(envPath)) {
     console.error('.env file not found in project root. Create one with SUPABASE_URL and SUPABASE_KEY.');
     process.exit(1);
